@@ -1,7 +1,7 @@
 "use server"
 
 import { getDb, generateId } from "@/lib/db"
-import { createInvoice, deleteInvoice as deleteInvoiceDb, updateInvoice } from "@/lib/data/invoices"
+import { createInvoice, deleteInvoice as deleteInvoiceDb, updateInvoice, getInvoiceById } from "@/lib/data/invoices"
 import { initDb } from "@/lib/db"
 
 // Transform client-side invoice to database format
@@ -73,16 +73,16 @@ export async function saveInvoiceToDbAction(invoice: any) {
     // Extract payment details if present
     const paymentDetails = invoice.paymentDetails
       ? {
-          amount_paid: invoice.paymentDetails.amountPaid || 0,
-          employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-          payment_date: invoice.paymentDetails.paymentDate || null,
-          notes: invoice.paymentDetails.notes || null,
-          referral_payments:
-            invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-              referral_id: payment.id,
-              amount: payment.amount,
-            })) || [],
-        }
+        amount_paid: invoice.paymentDetails.amountPaid || 0,
+        employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+        payment_date: invoice.paymentDetails.paymentDate || null,
+        notes: invoice.paymentDetails.notes || null,
+        referral_payments:
+          invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+            referral_id: payment.id,
+            amount: payment.amount,
+          })) || [],
+      }
       : undefined
 
     const result = await createInvoice(dbInvoice, paymentDetails)
@@ -148,16 +148,16 @@ export async function saveInvoicesToDbAction(invoices: any[]) {
           // Extract payment details if present
           const paymentDetails = invoice.paymentDetails
             ? {
-                amount_paid: invoice.paymentDetails.amountPaid || 0,
-                employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-                payment_date: invoice.paymentDetails.paymentDate || null,
-                notes: invoice.paymentDetails.notes || null,
-                referral_payments:
-                  invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-                    referral_id: payment.id,
-                    amount: payment.amount,
-                  })) || [],
-              }
+              amount_paid: invoice.paymentDetails.amountPaid || 0,
+              employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+              payment_date: invoice.paymentDetails.paymentDate || null,
+              notes: invoice.paymentDetails.notes || null,
+              referral_payments:
+                invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+                  referral_id: payment.id,
+                  amount: payment.amount,
+                })) || [],
+            }
             : undefined
 
           // Transform the invoice data
@@ -191,16 +191,16 @@ export async function saveInvoicesToDbAction(invoices: any[]) {
           // Extract payment details if present
           const paymentDetails = invoice.paymentDetails
             ? {
-                amount_paid: invoice.paymentDetails.amountPaid || 0,
-                employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-                payment_date: invoice.paymentDetails.paymentDate || null,
-                notes: invoice.paymentDetails.notes || null,
-                referral_payments:
-                  invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-                    referral_id: payment.id,
-                    amount: payment.amount,
-                  })) || [],
-              }
+              amount_paid: invoice.paymentDetails.amountPaid || 0,
+              employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+              payment_date: invoice.paymentDetails.paymentDate || null,
+              notes: invoice.paymentDetails.notes || null,
+              referral_payments:
+                invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+                  referral_id: payment.id,
+                  amount: payment.amount,
+                })) || [],
+            }
             : undefined
 
           result = await createInvoice(dbInvoice, paymentDetails)
@@ -277,16 +277,16 @@ export async function updateInvoiceInDbAction(invoice: any) {
     // Extract payment details if present
     const paymentDetails = invoice.paymentDetails
       ? {
-          amount_paid: invoice.paymentDetails.amountPaid || 0,
-          employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-          payment_date: invoice.paymentDetails.paymentDate || null,
-          notes: invoice.paymentDetails.notes || null,
-          referral_payments:
-            invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-              referral_id: payment.id,
-              amount: payment.amount,
-            })) || [],
-        }
+        amount_paid: invoice.paymentDetails.amountPaid || 0,
+        employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+        payment_date: invoice.paymentDetails.paymentDate || null,
+        notes: invoice.paymentDetails.notes || null,
+        referral_payments:
+          invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+            referral_id: payment.id,
+            amount: payment.amount,
+          })) || [],
+      }
       : undefined
 
     // Update the invoice in the database
@@ -369,16 +369,16 @@ export async function updateMultipleInvoicesAction(invoices: any[]) {
             // Extract payment details if present
             const paymentDetails = invoice.paymentDetails
               ? {
-                  amount_paid: invoice.paymentDetails.amountPaid || 0,
-                  employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-                  payment_date: invoice.paymentDetails.paymentDate || null,
-                  notes: invoice.paymentDetails.notes || null,
-                  referral_payments:
-                    invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-                      referral_id: payment.id,
-                      amount: payment.amount,
-                    })) || [],
-                }
+                amount_paid: invoice.paymentDetails.amountPaid || 0,
+                employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+                payment_date: invoice.paymentDetails.paymentDate || null,
+                notes: invoice.paymentDetails.notes || null,
+                referral_payments:
+                  invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+                    referral_id: payment.id,
+                    amount: payment.amount,
+                  })) || [],
+              }
               : undefined
 
             try {
@@ -409,16 +409,16 @@ export async function updateMultipleInvoicesAction(invoices: any[]) {
         // Extract payment details if present
         const paymentDetails = invoice.paymentDetails
           ? {
-              amount_paid: invoice.paymentDetails.amountPaid || 0,
-              employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
-              payment_date: invoice.paymentDetails.paymentDate || null,
-              notes: invoice.paymentDetails.notes || null,
-              referral_payments:
-                invoice.paymentDetails.referralPayments?.map((payment: any) => ({
-                  referral_id: payment.id,
-                  amount: payment.amount,
-                })) || [],
-            }
+            amount_paid: invoice.paymentDetails.amountPaid || 0,
+            employee_payment_amount: invoice.paymentDetails.employeePaymentAmount || 0,
+            payment_date: invoice.paymentDetails.paymentDate || null,
+            notes: invoice.paymentDetails.notes || null,
+            referral_payments:
+              invoice.paymentDetails.referralPayments?.map((payment: any) => ({
+                referral_id: payment.id,
+                amount: payment.amount,
+              })) || [],
+          }
           : undefined
 
         // Transform the invoice data
@@ -513,6 +513,79 @@ export async function deleteInvoiceAction(id: string, invoiceNumber?: string) {
     return {
       success: false,
       message: `Failed to delete invoice: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}
+
+// Transform database format to client-side invoice
+function transformInvoiceFromDb(dbInvoice: any) {
+  if (!dbInvoice) return null
+
+  return {
+    id: dbInvoice.id,
+    invoiceNumber: dbInvoice.invoice_number,
+    date: dbInvoice.date,
+    paymentTerms: dbInvoice.payment_terms || "",
+    vendor: {
+      id: dbInvoice.vendor_id,
+      name: dbInvoice.vendor_name || "",
+      address: "", // Placeholder as DB query might not fetch it
+    },
+    billTo: {
+      id: dbInvoice.client_id,
+      name: dbInvoice.client_name || "",
+      address: "", // Placeholder
+    },
+    serviceFor: dbInvoice.service_for || "",
+    employee: {
+      id: dbInvoice.employee_id,
+      name: dbInvoice.employee_name || "",
+    },
+    period: {
+      month: dbInvoice.period_month || "",
+      start: dbInvoice.period_start || "",
+      end: dbInvoice.period_end || "",
+    },
+    hours: dbInvoice.hours || 0,
+    billRate: dbInvoice.bill_rate || 0,
+    payRate: dbInvoice.employee_default_pay_rate || 0,
+    totalBillAmount: dbInvoice.total_bill_amount || 0,
+    status: dbInvoice.status,
+    paymentDetails: dbInvoice.payment_details
+      ? {
+        amountPaid: dbInvoice.payment_details.amount_paid,
+        employeePaymentAmount: dbInvoice.payment_details.employee_payment_amount,
+        paymentDate: dbInvoice.payment_details.payment_date,
+        notes: dbInvoice.payment_details.notes,
+        referralPayments: dbInvoice.payment_details.referral_payments?.map((rp: any) => ({
+          id: rp.id,
+          name: rp.referral_name || "",
+          amount: rp.amount,
+        })),
+      }
+      : undefined,
+  }
+}
+
+// Get a single invoice by ID (Server Action wrapper)
+export async function getInvoiceAction(id: string) {
+  try {
+    const db = await getDb()
+    console.log(`[getInvoiceAction] Fetching raw invoice for ID: ${id}`)
+    const invoice = await getInvoiceById(id)
+
+    if (!invoice) {
+      return { success: false, message: "Invoice not found" }
+    }
+
+    const clientInvoice = transformInvoiceFromDb(invoice)
+
+    return { success: true, invoice: clientInvoice }
+  } catch (error) {
+    console.error(`Error fetching invoice ${id}:`, error)
+    return {
+      success: false,
+      message: `Failed to fetch invoice: ${error instanceof Error ? error.message : String(error)}`,
     }
   }
 }

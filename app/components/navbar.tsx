@@ -13,6 +13,7 @@ export function Navbar() {
     { name: "Employee List", href: "/employee-list" },
     { name: "Invoice History", href: "/invoice-history" },
     { name: "Finance Dashboard", href: "/finance-dashboard" },
+    { name: "Reports", href: "/reports/payment-report" },
   ]
 
   return (
@@ -28,11 +29,10 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`${
-                    pathname === item.href
+                  className={`${pathname === item.href
                       ? "border-indigo-500 text-gray-900"
                       : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap`}
+                    } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap`}
                 >
                   {item.name}
                 </Link>
@@ -40,11 +40,10 @@ export function Navbar() {
               {/* Database Initialization */}
               <Link
                 href="/db-init"
-                className={`${
-                  pathname === "/db-init"
+                className={`${pathname === "/db-init"
                     ? "border-indigo-500 text-gray-900"
                     : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap`}
+                  } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium whitespace-nowrap`}
               >
                 Database Init
               </Link>

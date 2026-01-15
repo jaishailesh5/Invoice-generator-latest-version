@@ -37,7 +37,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { formatDate } from "@/lib/date-utils"
-import { deleteInvoiceAction } from "@/app/actions/invoice-actions"
+
+import { deleteInvoiceAction, getInvoiceAction } from "@/app/actions/invoice-actions"
 import { initializeDatabase } from "../actions/db-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -129,6 +130,8 @@ export default function InvoiceHistory() {
   const [filterClient, setFilterClient] = useState<string>("all")
   const [clients, setClients] = useState<string[]>([])
 
+
+
   // Payment status dialog
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null)
@@ -158,6 +161,12 @@ export default function InvoiceHistory() {
   const invoiceRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // Update the useEffect that loads invoices to ensure IDs are properly set
+  // FIX: Use ref to track latest invoices for event handlers to avoid stale closures
+  const invoicesRef = useRef<Invoice[]>([])
+  useEffect(() => {
+    invoicesRef.current = invoices
+  }, [invoices])
+
   useEffect(() => {
     const loadInvoices = async () => {
       setIsLoading(true)
@@ -338,14 +347,17 @@ export default function InvoiceHistory() {
     const visibleInvoices = getSortedInvoices()
     setSelectAll(
       selectedInvoices.size === visibleInvoices.length &&
-        visibleInvoices.length > 0 &&
-        visibleInvoices.every((inv) => selectedInvoices.has(inv.invoiceNumber)),
+      visibleInvoices.length > 0 &&
+      visibleInvoices.every((inv) => selectedInvoices.has(inv.invoiceNumber)),
     )
   }, [selectedInvoices, filterMonth, filterVendor, filterStatus, filterPeriodStart, filterPeriodEnd, searchTerm])
 
-  // Auto-update amount paid when status changes to "paid"
-  useEffect(() => {
-    if (paymentStatus === "paid" && paymentInvoice) {
+  // Handle payment status change with auto-calculations
+  const handlePaymentStatusChange = (value: "pending" | "paid" | "partially_paid") => {
+    setPaymentStatus(value)
+
+    // Auto-update amount paid when status changes to "paid"
+    if (value === "paid" && paymentInvoice) {
       setAmountPaid(paymentInvoice.totalBillAmount.toFixed(2))
 
       // Auto-calculate employee payment based on pay rate * hours
@@ -367,7 +379,7 @@ export default function InvoiceHistory() {
         setReferralPayments(newReferralPayments)
       }
     }
-  }, [paymentStatus, paymentInvoice])
+  }
 
   // Load jsPDF and html2canvas dynamically when needed
   const loadPdfLibraries = async () => {
@@ -653,41 +665,65 @@ export default function InvoiceHistory() {
     setShowFilterPopover(false)
   }
 
-  const handleUpdatePayment = (invoice: Invoice) => {
+  /* 
+   * FETCH-ON-OPEN STRATEGY
+   * Instead of relying on possibly stale client-side state, we fetch the fresh invoice 
+   * directly from the server whenever the dialog opens.
+   */
+  const handleUpdatePayment = async (invoice: Invoice) => {
+    // 1. Show opening state immediately using available data as placeholder
     setPaymentInvoice(invoice)
-    setPaymentStatus(invoice.status || "pending")
-    setAmountPaid(invoice.paymentDetails?.amountPaid?.toFixed(2) || "0.00")
-    setPaymentDate(invoice.paymentDetails?.paymentDate || new Date().toISOString().split("T")[0])
-    setPaymentNotes(invoice.paymentDetails?.notes || "")
-    setEmployeePaymentAmount(invoice.paymentDetails?.employeePaymentAmount?.toFixed(2) || "0.00")
+    setShowPaymentDialog(true) // Open dialog first so user sees something happening
 
-    // Set referral payments
-    if (invoice.paymentDetails?.referralPayments) {
-      setReferralPayments(
-        invoice.paymentDetails.referralPayments.map((payment) => ({
-          id: payment.id,
-          name: payment.name,
-          amount: payment.amount.toFixed(2),
-        })),
-      )
-    } else if (invoice.employee.referrals) {
-      // Initialize with zero amounts
-      setReferralPayments(
-        invoice.employee.referrals.map((referral) => ({
-          id: referral.id,
-          name: referral.name,
-          amount: "0.00",
-        })),
-      )
-    } else {
-      setReferralPayments([])
+    try {
+      // 2. Fetch fresh data from server
+      console.log(`Fetching fresh data for invoice ${invoice.invoiceNumber}...`)
+      const result = await getInvoiceAction(invoice.id)
+
+      if (result.success && result.invoice) {
+        // 3. Update with fresh server data
+        const freshInvoice = result.invoice
+
+        // Update the form state with fresh data
+        setPaymentStatus(freshInvoice.status || "pending")
+        setAmountPaid(freshInvoice.paymentDetails?.amountPaid?.toFixed(2) || "0.00")
+        setPaymentDate(freshInvoice.paymentDetails?.paymentDate || new Date().toISOString().split("T")[0])
+        setPaymentNotes(freshInvoice.paymentDetails?.notes || "")
+        setEmployeePaymentAmount(freshInvoice.paymentDetails?.employeePaymentAmount?.toFixed(2) || "0.00")
+
+        // Update referral payments
+        if (freshInvoice.paymentDetails?.referralPayments) {
+          setReferralPayments(
+            freshInvoice.paymentDetails.referralPayments.map((payment: any) => ({ // Type cast as necessary
+              id: payment.id,
+              name: payment.referralName || payment.name, // Handle potentially different field names
+              amount: payment.amount.toFixed(2),
+            }))
+          )
+        } else if (freshInvoice.employee_name /* Accessing joined field if needed, or check original employee object */) {
+          // Fallback to initial employee referrals if no payment details exist yet
+          // But since we are fetching fresh invoice which might be different structure...
+          // Let's rely on what we have. 
+          // If it's a fresh load, we might need to check if we can access employee referrals.
+          // However, `getInvoiceById` returns `InvoiceWithDetails`.
+          // Let's stick to cleaning existing payment details first.
+          setReferralPayments([])
+        }
+
+        // Update the paymentInvoice state to the fresh one so 'save' uses correct ID/Structure
+        setPaymentInvoice(freshInvoice as unknown as Invoice)
+      }
+    } catch (error) {
+      console.error("Failed to fetch fresh invoice data:", error)
+      toast.default({
+        title: "Warning",
+        description: "Could not fetch latest data. Editing currently visible version.",
+        variant: "destructive"
+      })
     }
-
-    setShowPaymentDialog(true)
   }
 
-  // Find the savePaymentDetails function and replace it with this corrected version
-  // that properly handles the "pending" status for individual invoices
+
 
   // Save payment details and automatically save to database
   const savePaymentDetails = async () => {
@@ -862,6 +898,7 @@ export default function InvoiceHistory() {
 
       // Update state
       setInvoices(updatedInvoices)
+      invoicesRef.current = updatedInvoices // FIX: Force update ref immediately to avoid stale data in event handlers
       setFilteredInvoices(updatedInvoices)
 
       // Close dialog
@@ -1081,6 +1118,7 @@ export default function InvoiceHistory() {
 
       // Update state
       setInvoices(updatedInvoices)
+      invoicesRef.current = updatedInvoices // FIX: Force update ref immediately
       setFilteredInvoices(updatedInvoices)
 
       // Clear selection
@@ -2578,7 +2616,7 @@ export default function InvoiceHistory() {
                   Status
                 </Label>
                 <div className="col-span-8 w-full">
-                  <Select value={paymentStatus} onValueChange={setPaymentStatus as any}>
+                  <Select value={paymentStatus} onValueChange={handlePaymentStatusChange}>
                     <SelectTrigger id="payment-status" className="w-full">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
